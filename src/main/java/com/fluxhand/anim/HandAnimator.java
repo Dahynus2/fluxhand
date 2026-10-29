@@ -28,6 +28,8 @@ public final class HandAnimator {
     private static final float[] lastSwing = new float[2];
     private static final boolean[] placeSwing = new boolean[2];
 
+    private static float walkSpeed = 0f;
+    private static float walkPhase = 0f;
     private static float sprintBlend = 0f;
     private static float sneakBlend = 0f;
     private static long lastNanos = System.nanoTime();
@@ -74,9 +76,8 @@ public final class HandAnimator {
         }
 
         // --- Balanceo al caminar / correr ---
-        float speed = MathHelper.clamp(player.limbAnimator.getSpeed(tickProgress), 0f, 1f);
-        float phase = player.limbAnimator.getPos(tickProgress) * 0.6662f
-                + (hand == Hand.MAIN_HAND ? 0f : MathHelper.PI);
+        float speed = walkSpeed;
+        float phase = walkPhase + (hand == Hand.MAIN_HAND ? 0f : MathHelper.PI);
         if (cfg.walkSway && speed > 0.001f) {
             float walk = speed * k * (1f - sprintBlend * 0.4f);
             POSE[1] += 0.010f * MathHelper.sin(phase * 2f) * walk;                 // sube/baja
@@ -138,6 +139,10 @@ public final class HandAnimator {
         float dt = Math.min(0.1f, (now - lastNanos) / 1.0e9f);
         lastNanos = now;
         float rate = 1f - (float) Math.exp(-12f * dt);
+        // Velocidad de caminata suavizada y fase propia (no dependemos de getPos de vanilla).
+        float target = MathHelper.clamp(player.limbAnimator.getSpeed(), 0f, 1f);
+        walkSpeed += (target - walkSpeed) * rate;
+        walkPhase = (walkPhase + walkSpeed * 13f * dt) % 6.2831855f;
         sprintBlend += ((player.isSprinting() ? 1f : 0f) - sprintBlend) * rate;
         sneakBlend += ((player.isSneaking() ? 1f : 0f) - sneakBlend) * rate;
     }
